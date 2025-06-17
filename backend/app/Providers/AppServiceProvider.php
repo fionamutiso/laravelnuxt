@@ -21,6 +21,12 @@ class AppServiceProvider extends ServiceProvider
     {
         //
     }
-    public const HOME = '/api';
+    protected function mapApiRoutes()
+{
+    Route::prefix('api') 
+         ->middleware('api')
+         ->namespace($this->namespace)
+         ->group(base_path('routes/api.php'));
+}
     
 }
