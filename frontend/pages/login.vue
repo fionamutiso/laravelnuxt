@@ -72,7 +72,7 @@ const handleLogin = async () => {
     errorMsg.value = error.value.data?.message || 'Invalid credentials'
   } else {
     console.log('Logged in!', data.value)
-    navigateTo('/dashboard')
+    navigateTo('/Dashboard')
   }
 }
 </script>

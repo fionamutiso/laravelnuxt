@@ -1,5 +1,8 @@
 <template>
-  <NuxtPage />
+  <div class="h-full bg-white">
+	<div class="h-full"></div>
+	  <NuxtPage />
+	</div>
 </template>
 
 <style>
