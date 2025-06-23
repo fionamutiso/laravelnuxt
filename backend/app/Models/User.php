@@ -45,4 +45,18 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    public function tasks()
+{
+    return $this->hasMany(Task::class);
+}
+
+    public function completedTasks()
+    {
+        return $this->hasMany(Task::class)->where('completed', true);
+    }
+
+    public function pendingTasks()
+    {
+        return $this->hasMany(Task::class)->where('completed', false);
+    }
 }

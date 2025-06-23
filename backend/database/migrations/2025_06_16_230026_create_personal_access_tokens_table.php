@@ -3,6 +3,13 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+/**
+ * Migration to create the personal_access_tokens table.
+ *
+ * This table is used to store personal access tokens for users.
+ * It includes fields for tokenable entity, token name, unique token string,
+ * abilities, last used timestamp, expiration timestamp, and timestamps for creation and updates.
+ */
 
 return new class extends Migration
 {
