@@ -1,6 +1,9 @@
 <template>
   <div class="container mx-auto p-5 max-w-4xl font-sans">
-    <h1 class="text-3xl font-bold mb-6">Welcome</h1>
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-bold">Welcome</h1>
+      <button @click="logout" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition">Logout</button>
+    </div>
 
     <div class="add-task bg-white p-6 rounded-lg shadow-md mb-8">
       <h2 class="text-2xl font-semibold mb-4">Add New Task</h2>
@@ -143,8 +146,7 @@ export default {
         
         if (!response.ok) throw new Error('Network response was not ok')
         
-        const newTask = await response.json()
-        this.tasks.push(newTask)
+        await this.fetchTasks()
         this.newTask = { title: '', description: '', due_date: '' }
       } catch (error) {
         console.error('Error adding task:', error)
@@ -189,6 +191,17 @@ export default {
     formatDate(dateString) {
       const options = { year: 'numeric', month: '2-digit', day: '2-digit' }
       return new Date(dateString).toLocaleDateString('en-US', options)
+    },
+    async logout() {
+      try {
+        await fetch('http://localhost:8000/api/logout', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        window.location.href = '/login';
+      } catch (error) {
+        console.error('Error logging out:', error);
+      }
     }
   }
 }

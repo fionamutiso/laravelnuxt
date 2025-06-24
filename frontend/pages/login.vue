@@ -54,25 +54,38 @@ const handleLogin = async () => {
   loading.value = true
   errorMsg.value = ''
 
-  const { data, error } = await useFetch('http://localhost:8000/api/login', {
-    method: 'POST',
-    body: {
-      email: email.value,
-      password: password.value
-    },
-    headers: {
-      accept: 'application/json'
-    },
-    credentials: 'include'
-  })
+  try {
+    // ✅ Step 1: Get the CSRF cookie
+    await fetch('http://localhost:8000/sanctum/csrf-cookie', {
+      credentials: 'include'
+    })
+
+    // ✅ Step 2: Make the login request
+    const { data, error } = await useFetch('http://localhost:8000/api/login', {
+      method: 'POST',
+      body: {
+        email: email.value,
+        password: password.value
+      },
+      headers: {
+        accept: 'application/json'
+      },
+      credentials: 'include'
+    })
+
+    if (error.value) {
+      errorMsg.value = error.value.data?.message || 'Invalid credentials'
+    } else {
+      console.log('Logged in!', data.value)
+      navigateTo('/Dashboard')
+    }
+
+  } catch (err) {
+    errorMsg.value = 'Login failed. Please try again.'
+    console.error(err)
+  }
 
   loading.value = false
-
-  if (error.value) {
-    errorMsg.value = error.value.data?.message || 'Invalid credentials'
-  } else {
-    console.log('Logged in!', data.value)
-    navigateTo('/Dashboard')
-  }
 }
 </script>
+
