@@ -37,7 +37,7 @@
       </p>
 
       <p class="text-center text-sm">
-        Don’t have an account?
+        Don't have an account?
         <NuxtLink to="/register" class="text-pink-500 hover:underline ml-1">Register</NuxtLink>
       </p>
     </form>
@@ -77,7 +77,7 @@ const handleLogin = async () => {
       errorMsg.value = error.value.data?.message || 'Invalid credentials'
     } else {
       console.log('Logged in!', data.value)
-      navigateTo('/Dashboard')
+      navigateTo('/dashboard')
     }
 
   } catch (err) {

@@ -9,9 +9,10 @@ use App\Http\Controllers\Api\TaskController;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
-Route::middleware('auth:sanctum')->get('/user', [AuthController::class, 'user']);
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/tasks', [TaskController::class, 'tasks']);
-    Route::apiResource('tasks', TaskController::class);
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
+    return $request->user();
+});
 
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('tasks', TaskController::class);
 });
