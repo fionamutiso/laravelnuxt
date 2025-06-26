@@ -7,39 +7,62 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
     public function login(Request $request)
-{
-    $request->validate([
-        'email' => 'required|email',
-        'password' => 'required'
-    ]);
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required'
+        ]);
 
-    if (!Auth::attempt($request->only('email', 'password'))) {
-        return response()->json(['message' => 'Invalid credentials'], 401);
+        try {
+            if (!Auth::attempt($request->only('email', 'password'))) {
+                Log::info('Login failed for email: ' . $request->email);
+                return response()->json(['message' => 'Invalid credentials'], 401);
+            }
+
+            $user = Auth::user();
+            Log::info('User logged in: ' . $user->email);
+            
+            return response()->json([
+                'message' => 'Logged in successfully', 
+                'user' => $user
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Login error: ' . $e->getMessage());
+            return response()->json(['message' => 'Login failed'], 500);
+        }
     }
 
-    return response()->json(['message' => 'Logged in', 'user' => Auth::user()]);
-}
+    public function register(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|min:6'
+        ]);
 
-public function register(Request $request)
-{
-    $request->validate([
-        'name' => 'required|string',
-        'email' => 'required|email|unique:users',
-        'password' => 'required|min:6'
-    ]);
+        try {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password)
+            ]);
 
-    $user = User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'password' => bcrypt($request->password)
-    ]);
+            Auth::login($user);
+            
+            Log::info('User registered: ' . $user->email);
 
-    Auth::login($user); // auto login after register
-
-    return response()->json(['message' => 'Registered', 'user' => $user]);
-}
+            return response()->json([
+                'message' => 'Registered successfully', 
+                'user' => $user
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Registration error: ' . $e->getMessage());
+            return response()->json(['message' => 'Registration failed'], 500);
+        }
+    }
 }

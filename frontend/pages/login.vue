@@ -55,12 +55,11 @@ const handleLogin = async () => {
   errorMsg.value = ''
 
   try {
-    // ✅ Step 1: Get the CSRF cookie
+    // Get CSRF cookie first
     await fetch('http://localhost:8000/sanctum/csrf-cookie', {
       credentials: 'include'
     })
 
-    // ✅ Step 2: Make the login request
     const { data, error } = await useFetch('http://localhost:8000/api/login', {
       method: 'POST',
       body: {
@@ -83,9 +82,9 @@ const handleLogin = async () => {
   } catch (err) {
     errorMsg.value = 'Login failed. Please try again.'
     console.error(err)
+  } finally {
+    loading.value = false
   }
-
-  loading.value = false
 }
 </script>
 

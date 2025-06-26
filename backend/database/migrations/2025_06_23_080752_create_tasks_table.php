@@ -13,13 +13,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('tasks', function (Blueprint $table) {
-    $table->id();
-    $table->foreignId('user_id')->constrained()->onDelete('cascade');
-    $table->string('title');
-    $table->text('description')->nullable();
-    $table->date('due_date');
-    $table->boolean('completed')->default(false);
-    $table->timestamps();
+            $table->id();
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->date('due_date');
+            $table->boolean('completed')->default(false);
+            $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('category_id')->nullable();
+            $table->timestamps();
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('category_id')->references('id')->on('categories')->onDelete('set null');
         });
     }
 

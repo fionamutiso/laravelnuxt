@@ -9,9 +9,24 @@ use Illuminate\Support\Facades\Auth;
 
 class TaskController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        return Task::where('user_id', Auth::id())->orderBy('due_date')->get();
+        $query = Task::query();
+        
+        // If user is authenticated, show their tasks
+        if (Auth::check()) {
+            $query->where('user_id', Auth::id());
+        }
+        // If not authenticated, show all tasks (global)
+        
+        if ($request->has('category_id') && $request->category_id) {
+            $query->where('category_id', $request->category_id);
+        }
+        if ($request->has('completed') && $request->completed !== null) {
+            $query->where('completed', $request->completed);
+        }
+        $tasks = $query->orderBy('due_date')->paginate(10);
+        return response()->json($tasks);
     }
 
     public function store(Request $request)
@@ -20,8 +35,10 @@ class TaskController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'due_date' => 'required|date',
+            'category_id' => 'nullable|exists:categories,id',
         ]);
 
+        // Set user_id if authenticated, otherwise null (global task)
         $validated['user_id'] = Auth::id();
         $task = Task::create($validated);
 
@@ -30,8 +47,8 @@ class TaskController extends Controller
 
     public function update(Request $request, Task $task)
     {
-        // Ensure user can only update their own tasks
-        if ($task->user_id !== Auth::id()) {
+        // If user is authenticated, ensure they can only update their own tasks
+        if (Auth::check() && $task->user_id !== Auth::id()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 
@@ -40,6 +57,7 @@ class TaskController extends Controller
             'description' => 'nullable|string',
             'due_date' => 'sometimes|date',
             'completed' => 'sometimes|boolean',
+            'category_id' => 'nullable|exists:categories,id',
         ]);
 
         $task->update($validated);
@@ -49,8 +67,8 @@ class TaskController extends Controller
 
     public function destroy(Task $task)
     {
-        // Ensure user can only delete their own tasks
-        if ($task->user_id !== Auth::id()) {
+        // If user is authenticated, ensure they can only delete their own tasks
+        if (Auth::check() && $task->user_id !== Auth::id()) {
             return response()->json(['message' => 'Unauthorized'], 403);
         }
 

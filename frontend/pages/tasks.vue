@@ -6,6 +6,27 @@
         <button @click="logout" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl transition">Logout</button>
       </div>
 
+      <!-- Filters -->
+      <div class="flex flex-wrap gap-4 mb-6 items-center">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Category</label>
+          <select v-model="filters.category_id" class="px-3 py-2 border border-pink-300 rounded-xl">
+            <option value="">All</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">Status</label>
+          <select v-model="filters.completed" class="px-3 py-2 border border-pink-300 rounded-xl">
+            <option value="">All</option>
+            <option value="0">Pending</option>
+            <option value="1">Completed</option>
+          </select>
+        </div>
+        <button @click="applyFilters" class="px-4 py-2 bg-pink-400 text-white rounded-xl">Apply</button>
+        <button @click="resetFilters" class="px-4 py-2 bg-gray-200 text-pink-600 rounded-xl">Reset</button>
+      </div>
+
       <div class="add-task bg-white p-6 rounded-2xl shadow-xl mb-8">
         <h2 class="text-2xl font-semibold mb-4 text-pink-600">Add New Task</h2>
         <form @submit.prevent="addTask" class="space-y-4">
@@ -104,6 +125,12 @@
             </tbody>
           </table>
         </div>
+        <!-- Pagination Controls -->
+        <div v-if="pagination.total > pagination.per_page" class="flex justify-center mt-6 gap-2">
+          <button @click="changePage(pagination.current_page - 1)" :disabled="pagination.current_page === 1" class="px-3 py-1 rounded bg-pink-200 hover:bg-pink-300 disabled:opacity-50">Prev</button>
+          <button v-for="page in totalPages" :key="page" @click="changePage(page)" :class="['px-3 py-1 rounded', page === pagination.current_page ? 'bg-pink-500 text-white' : 'bg-pink-100 hover:bg-pink-200']">{{ page }}</button>
+          <button @click="changePage(pagination.current_page + 1)" :disabled="pagination.current_page === totalPages" class="px-3 py-1 rounded bg-pink-200 hover:bg-pink-300 disabled:opacity-50">Next</button>
+        </div>
       </div>
     </div>
   </div>
@@ -114,57 +141,89 @@ export default {
   data() {
     return {
       tasks: [],
+      categories: [],
       newTask: {
         title: '',
         description: '',
-        due_date: ''
+        due_date: '',
+        category_id: ''
+      },
+      filters: {
+        category_id: '',
+        completed: ''
+      },
+      pagination: {
+        current_page: 1,
+        last_page: 1,
+        per_page: 10,
+        total: 0
       },
       editingTask: null
     }
   },
+  computed: {
+    totalPages() {
+      return this.pagination.last_page || 1
+    }
+  },
   async mounted() {
+    // Restrict access: only allow if navigated from dashboard
+    if (!this.$route.query.fromDashboard) {
+      this.$router.replace('/dashboard')
+      return
+    }
+    await this.fetchCategories()
     await this.fetchTasks()
   },
   methods: {
-    async fetchTasks() {
+    async fetchCategories() {
       try {
-        // Get CSRF cookie first
-        await fetch('http://localhost:8000/sanctum/csrf-cookie', {
-          credentials: 'include'
-        })
-
-        const response = await fetch('http://localhost:8000/api/tasks', {
-          credentials: 'include',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-          }
-        })
-        
-        if (!response.ok) {
-          if (response.status === 401) {
-            // Redirect to login if unauthorized
-            window.location.href = '/login'
-            return
-          }
-          throw new Error('Network response was not ok')
+        const response = await fetch('http://localhost:8000/api/categories')
+        if (!response.ok) throw new Error('Failed to fetch categories')
+        this.categories = await response.json()
+      } catch (error) {
+        console.error('Error fetching categories:', error)
+      }
+    },
+    async fetchTasks(page = 1) {
+      try {
+        let url = `http://localhost:8000/api/tasks?page=${page}`
+        if (this.filters.category_id) url += `&category_id=${this.filters.category_id}`
+        if (this.filters.completed !== '') url += `&completed=${this.filters.completed}`
+        const response = await fetch(url)
+        if (!response.ok) throw new Error('Failed to fetch tasks')
+        const data = await response.json()
+        this.tasks = data.data
+        this.pagination = {
+          current_page: data.current_page,
+          last_page: data.last_page,
+          per_page: data.per_page,
+          total: data.total
         }
-        
-        this.tasks = await response.json()
       } catch (error) {
         console.error('Error fetching tasks:', error)
       }
     },
+    applyFilters() {
+      this.fetchTasks(1)
+    },
+    resetFilters() {
+      this.filters = { category_id: '', completed: '' }
+      this.fetchTasks(1)
+    },
+    changePage(page) {
+      if (page >= 1 && page <= this.totalPages) {
+        this.fetchTasks(page)
+      }
+    },
+    getCategoryName(id) {
+      const cat = this.categories.find(c => c.id === id)
+      return cat ? cat.name : 'No Category'
+    },
     async addTask() {
       try {
-        // Get CSRF cookie first
-        await fetch('http://localhost:8000/sanctum/csrf-cookie', {
-          credentials: 'include'
-        })
-
         const response = await fetch('http://localhost:8000/api/tasks', {
           method: 'POST',
-          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
@@ -173,29 +232,19 @@ export default {
         })
         
         if (!response.ok) {
-          if (response.status === 401) {
-            window.location.href = '/login'
-            return
-          }
           throw new Error('Network response was not ok')
         }
         
         await this.fetchTasks()
-        this.newTask = { title: '', description: '', due_date: '' }
+        this.newTask = { title: '', description: '', due_date: '', category_id: '' }
       } catch (error) {
         console.error('Error adding task:', error)
       }
     },
     async updateTask(task) {
       try {
-        // Get CSRF cookie first
-        await fetch('http://localhost:8000/sanctum/csrf-cookie', {
-          credentials: 'include'
-        })
-
         const response = await fetch(`http://localhost:8000/api/tasks/${task.id}`, {
           method: 'PUT',
-          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
@@ -204,10 +253,6 @@ export default {
         })
         
         if (!response.ok) {
-          if (response.status === 401) {
-            window.location.href = '/login'
-            return
-          }
           throw new Error('Network response was not ok')
         }
         
@@ -218,24 +263,14 @@ export default {
     },
     async deleteTask(id) {
       try {
-        // Get CSRF cookie first
-        await fetch('http://localhost:8000/sanctum/csrf-cookie', {
-          credentials: 'include'
-        })
-
         const response = await fetch(`http://localhost:8000/api/tasks/${id}`, {
           method: 'DELETE',
-          credentials: 'include',
           headers: {
             'Accept': 'application/json'
           }
         })
         
         if (!response.ok) {
-          if (response.status === 401) {
-            window.location.href = '/login'
-            return
-          }
           throw new Error('Network response was not ok')
         }
         
