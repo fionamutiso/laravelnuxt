@@ -63,6 +63,10 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useAuth } from '../composables/useAuth'
+
+const { setToken, setUser } = useAuth()
+
 const name = ref('')
 const email = ref('')
 const password = ref('')
@@ -93,11 +97,6 @@ const handleRegister = async () => {
   successMsg.value = ''
   
   try {
-    // Get CSRF cookie first
-    await fetch('http://localhost:8000/sanctum/csrf-cookie', {
-      credentials: 'include'
-    })
-
     const { data, error } = await useFetch('http://localhost:8000/api/register', {
       method: 'POST',
       body: {
@@ -106,14 +105,19 @@ const handleRegister = async () => {
         password: password.value
       },
       headers: {
-        accept: 'application/json'
-      },
-      credentials: 'include'
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
     })
     
     if (error.value) {
       errorMsg.value = error.value.data?.message || 'Registration failed!'
     } else {
+      // Store the token and user using the composable
+      if (data.value?.token) {
+        setToken(data.value.token)
+        setUser(data.value.user)
+      }
       successMsg.value = 'Registration successful! Redirecting...'
       setTimeout(() => navigateTo('/dashboard'), 1200)
     }

@@ -9,19 +9,16 @@
     <h1>API Test</h1>
     <button onclick="testLogin()">Test Login</button>
     <button onclick="testTasks()">Test Tasks</button>
+    <button onclick="testLogout()">Test Logout</button>
     <div id="result"></div>
 
     <script>
+        let authToken = null;
+
         async function testLogin() {
             try {
-                // Get CSRF cookie
-                await fetch('http://localhost:8000/sanctum/csrf-cookie', {
-                    credentials: 'include'
-                });
-
                 const response = await fetch('http://localhost:8000/api/login', {
                     method: 'POST',
-                    credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
@@ -33,6 +30,10 @@
                 });
 
                 const data = await response.json();
+                if (data.token) {
+                    authToken = data.token;
+                    localStorage.setItem('auth_token', data.token);
+                }
                 document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
             } catch (error) {
                 document.getElementById('result').innerHTML = 'Error: ' + error.message;
@@ -41,19 +42,46 @@
 
         async function testTasks() {
             try {
-                // Get CSRF cookie
-                await fetch('http://localhost:8000/sanctum/csrf-cookie', {
-                    credentials: 'include'
-                });
+                const token = authToken || localStorage.getItem('auth_token');
+                if (!token) {
+                    document.getElementById('result').innerHTML = 'Please login first to get a token';
+                    return;
+                }
 
                 const response = await fetch('http://localhost:8000/api/tasks', {
-                    credentials: 'include',
                     headers: {
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${token}`
                     }
                 });
 
                 const data = await response.json();
+                document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('result').innerHTML = 'Error: ' + error.message;
+            }
+        }
+
+        async function testLogout() {
+            try {
+                const token = authToken || localStorage.getItem('auth_token');
+                if (!token) {
+                    document.getElementById('result').innerHTML = 'No token to logout';
+                    return;
+                }
+
+                const response = await fetch('http://localhost:8000/api/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+                authToken = null;
+                localStorage.removeItem('auth_token');
                 document.getElementById('result').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
             } catch (error) {
                 document.getElementById('result').innerHTML = 'Error: ' + error.message;

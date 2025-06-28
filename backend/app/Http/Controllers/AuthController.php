@@ -25,11 +25,14 @@ class AuthController extends Controller
             }
 
             $user = Auth::user();
+            $token = $user->createToken('auth-token')->plainTextToken;
+            
             Log::info('User logged in: ' . $user->email);
             
             return response()->json([
                 'message' => 'Logged in successfully', 
-                'user' => $user
+                'user' => $user,
+                'token' => $token
             ]);
         } catch (\Exception $e) {
             Log::error('Login error: ' . $e->getMessage());
@@ -52,17 +55,31 @@ class AuthController extends Controller
                 'password' => Hash::make($request->password)
             ]);
 
-            Auth::login($user);
+            $token = $user->createToken('auth-token')->plainTextToken;
             
             Log::info('User registered: ' . $user->email);
 
             return response()->json([
                 'message' => 'Registered successfully', 
-                'user' => $user
+                'user' => $user,
+                'token' => $token
             ], 201);
         } catch (\Exception $e) {
             Log::error('Registration error: ' . $e->getMessage());
             return response()->json(['message' => 'Registration failed'], 500);
+        }
+    }
+
+    public function logout(Request $request)
+    {
+        try {
+            $request->user()->currentAccessToken()->delete();
+            Log::info('User logged out: ' . $request->user()->email);
+            
+            return response()->json(['message' => 'Logged out successfully']);
+        } catch (\Exception $e) {
+            Log::error('Logout error: ' . $e->getMessage());
+            return response()->json(['message' => 'Logout failed'], 500);
         }
     }
 }

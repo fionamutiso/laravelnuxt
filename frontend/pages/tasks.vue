@@ -290,13 +290,24 @@ export default {
     },
     async logout() {
       try {
+        const token = localStorage.getItem('auth_token')
         await fetch('http://localhost:8000/api/logout', {
           method: 'POST',
-          credentials: 'include',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
         });
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('user')
         window.location.href = '/login';
       } catch (error) {
         console.error('Error logging out:', error);
+        // Still clear local storage and redirect even if API call fails
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('user')
+        window.location.href = '/login';
       }
     }
   }

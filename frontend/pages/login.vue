@@ -45,6 +45,10 @@
 </template>
 
 <script setup>
+import { useAuth } from '../composables/useAuth'
+
+const { setToken, setUser } = useAuth()
+
 const email = ref('')
 const password = ref('')
 const loading = ref(false)
@@ -55,11 +59,6 @@ const handleLogin = async () => {
   errorMsg.value = ''
 
   try {
-    // Get CSRF cookie first
-    await fetch('http://localhost:8000/sanctum/csrf-cookie', {
-      credentials: 'include'
-    })
-
     const { data, error } = await useFetch('http://localhost:8000/api/login', {
       method: 'POST',
       body: {
@@ -67,14 +66,19 @@ const handleLogin = async () => {
         password: password.value
       },
       headers: {
-        accept: 'application/json'
-      },
-      credentials: 'include'
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
     })
 
     if (error.value) {
       errorMsg.value = error.value.data?.message || 'Invalid credentials'
     } else {
+      // Store the token and user using the composable
+      if (data.value?.token) {
+        setToken(data.value.token)
+        setUser(data.value.user)
+      }
       console.log('Logged in!', data.value)
       navigateTo('/dashboard')
     }
